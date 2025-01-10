@@ -15,6 +15,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextLayoutResult
@@ -33,7 +35,7 @@ private val digits = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
 
 @Composable
 fun OldPhone(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
 ) {
 
     var rotationAngle by remember { mutableFloatStateOf(0f) }
@@ -138,6 +140,10 @@ fun OldPhone(
         }
 
         rotate(animatedRotationAngle) {
+
+            // радиус внутреннего диска, который находится в центре
+            val centerCircleRadius = size.width / 3.21f
+
             drawCircle(
                 color = Color.White,
             )
@@ -181,7 +187,101 @@ fun OldPhone(
                 }
             }
 
+            // рисуем внутренний диск серого цвета
+            drawCircle(
+                color = Color.LightGray,
+                radius = centerCircleRadius,
+                center = center
+            )
+            // количество точек, которые будут расположены по кругу
+            val dotsCount = 12
+
+            // радиус каждой точки
+            val dotRadius = 2.dp.toPx()
+
+            // расстояние от центра диска до точек (немного меньше радиуса центрального диска)
+            val dotDistance = centerCircleRadius - 10.dp.toPx()
+
+            // отрисовываем точки по кругу
+            repeat(dotsCount) { index ->
+
+                // вычисляем угол для текущей точки (360 градусов делим на количество точек)
+                val angle = (360f / dotsCount) * index
+
+                // переводим угол в радианы для использования в тригонометрических функциях
+                val angleRad = Math.toRadians(angle.toDouble())
+
+                // вычисляем x координату точки используя косинус угла
+                val dotX = center.x + dotDistance * cos(angleRad).toFloat()
+
+                // вычисляем y координату точки используя синус угла
+                val dotY = center.y + dotDistance * sin(angleRad).toFloat()
+
+                // рисуем точку
+                drawCircle(
+                    color = Color.Gray,
+                    radius = dotRadius,
+                    center = Offset(dotX, dotY)
+                )
+            }
+
+
         }
+
+        // рисуем внешнюю рамку телефонного диска
+        drawCircle(
+            color = Color.LightGray,
+            radius = size.width / 2f,
+            center = center,
+            style = Stroke(
+                width = 8.dp.toPx(),
+            ),
+        )
+
+        // Добавляем стоппер в виде трапеции
+        val stopperAngle = 0.0
+        val stopperOuterDistance = size.width / 2f // внешний радиус, на границе диска
+        val stopperInnerDistance = size.width / 2f - 48.dp.toPx() // увеличили глубину стоппера
+
+        // Точки для внешней (широкой) части трапеции
+        val outerLeftX = center.x + stopperOuterDistance * cos(
+            Math.toRadians(stopperAngle - 5).toDouble()
+        ).toFloat()
+        val outerLeftY = center.y + stopperOuterDistance * sin(
+            Math.toRadians(stopperAngle - 5).toDouble()
+        ).toFloat()
+        val outerRightX = center.x + stopperOuterDistance * cos(
+            Math.toRadians(stopperAngle + 5).toDouble()
+        ).toFloat()
+        val outerRightY = center.y + stopperOuterDistance * sin(
+            Math.toRadians(stopperAngle + 5).toDouble()
+        ).toFloat()
+
+        // Точки для внутренней (узкой) части трапеции
+        val innerLeftX = center.x + stopperInnerDistance * cos(
+            Math.toRadians(stopperAngle - 2.5).toDouble()
+        ).toFloat()
+        val innerLeftY = center.y + stopperInnerDistance * sin(
+            Math.toRadians(stopperAngle - 2.5).toDouble()
+        ).toFloat()
+        val innerRightX = center.x + stopperInnerDistance * cos(
+            Math.toRadians(stopperAngle + 2.5).toDouble()
+        ).toFloat()
+        val innerRightY = center.y + stopperInnerDistance * sin(
+            Math.toRadians(stopperAngle + 2.5).toDouble()
+        ).toFloat()
+
+        drawPath(
+            path = Path().apply {
+                moveTo(outerLeftX, outerLeftY)
+                lineTo(outerRightX, outerRightY)
+                lineTo(innerRightX, innerRightY)
+                lineTo(innerLeftX, innerLeftY)
+                close()
+            },
+            color = Color.LightGray
+        )
+
     }
 
 }
