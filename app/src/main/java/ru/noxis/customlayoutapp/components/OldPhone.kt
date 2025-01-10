@@ -1,5 +1,6 @@
 package ru.noxis.customlayoutapp.components
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -38,13 +39,16 @@ fun OldPhone(
     var rotationAngle by remember { mutableFloatStateOf(0f) }
     val textMeasurer = rememberTextMeasurer()
     val typography = MaterialTheme.typography.headlineLarge
-    //
-    var accumulatedDelta by remember { mutableFloatStateOf(0f) }
+
     var activeDigitIndex by remember { mutableIntStateOf(-1) }
 
     //список DigitBounds равный количеству цифр
     val digitBoundsList = remember { List(digits.size) { DigitBounds() } }
 
+    //переменную, которая будет анимировать значение угла поворота диска
+    val animatedRotationAngle by animateFloatAsState(
+        targetValue = rotationAngle, label = "rotationAngle"
+    )
 
     Canvas(
         modifier = modifier
@@ -88,11 +92,9 @@ fun OldPhone(
                             val targetRotation = rotationAngle + deltaAngle
 
                             //движения диска только в одну сторону, а именно от 0 до 270 градусов
-                            val canRotate = accumulatedDelta in 0f..270f
+                            val canRotate = rotationAngle in 0f..270f
                             if (canRotate) {
                                 rotationAngle = targetRotation.coerceIn(0f, 270f)
-                                accumulatedDelta =
-                                    (accumulatedDelta + deltaAngle).coerceIn(0f, 270f)
                             }
 
                             currentAngle = newAngle
@@ -102,6 +104,8 @@ fun OldPhone(
                         } while (event.changes.any { it.pressed })
 
                         activeDigitIndex = -1
+                        //сбрасываем угол вращения диска в 0
+                        rotationAngle = 0f
                     }
 
                 }
@@ -126,7 +130,7 @@ fun OldPhone(
             digitBoundsList[index].update(x, y, digitSize)
         }
 
-        rotate(rotationAngle) {
+        rotate(animatedRotationAngle) {
             drawCircle(
                 color = Color.White,
             )
