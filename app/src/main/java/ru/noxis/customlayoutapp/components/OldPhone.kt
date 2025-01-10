@@ -68,6 +68,8 @@ fun OldPhone(
                     activeDigitIndex = digitHit
 
                     if (digitHit != -1) {
+                        // Вычисляем максимальный угол поворота для выбранной цифры
+                        val maxRotation = (digitHit + 1) * 27f // 270 / 10 = 27 градусов на цифру
 
                         var currentAngle = calculateAngle(down.position, size.center)
                         do {
@@ -89,13 +91,18 @@ fun OldPhone(
                                 }
                             }
 //                        rotationAngle = (rotationAngle + deltaAngle)
+
                             val targetRotation = rotationAngle + deltaAngle
 
-                            //движения диска только в одну сторону, а именно от 0 до 270 градусов
-                            val canRotate = rotationAngle in 0f..270f
-                            if (canRotate) {
-                                rotationAngle = targetRotation.coerceIn(0f, 270f)
+                            if (rotationAngle <= maxRotation) {
+                                rotationAngle = targetRotation.coerceIn(0f, maxRotation)
                             }
+
+                            //движения диска только в одну сторону, а именно от 0 до 270 градусов
+//                            val canRotate = rotationAngle in 0f..270f
+//                            if (canRotate) {
+//                                rotationAngle = targetRotation.coerceIn(0f, 270f)
+//                            }
 
                             currentAngle = newAngle
                             event.changes
