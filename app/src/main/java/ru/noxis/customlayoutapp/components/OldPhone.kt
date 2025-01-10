@@ -1,6 +1,8 @@
 package ru.noxis.customlayoutapp.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -12,11 +14,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -33,7 +39,29 @@ fun OldPhone(
     val typography = MaterialTheme.typography.headlineLarge
 
     Canvas(
-        modifier = modifier.aspectRatio(1f)
+        modifier = modifier
+            .aspectRatio(1f)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    var currentAngle = calculateAngle(down.position, size.center)
+                    do {
+                        val event = awaitPointerEvent()
+                        val newAngle = calculateAngle(event.changes.first().position, size.center)
+
+                        /**
+                         * Когда палец двигается, мы вычисляем разницу между новым углом и предыдущим
+                         * deltaAngle - изменение угла
+                         */
+                        val deltaAngle = newAngle - currentAngle
+                        rotationAngle = (rotationAngle + deltaAngle)
+                        currentAngle = newAngle
+                        event.changes.first().consume()
+                    } while (event.changes.any { it.pressed })
+
+                }
+            }
+
     ) {
         rotate(rotationAngle) {
             drawCircle(
@@ -75,6 +103,17 @@ fun OldPhone(
 
 }
 
+//вычисляется угол поворота телефонного диска
+private fun calculateAngle(position: Offset, center: IntOffset): Float {
+    //При каждом движении пальца мы определяем разницу по осям X и Y:
+    val dx = position.x - center.x
+    val dy = position.y - center.y
+    //Эти значения описывают вектор от центра круга к точке касания.
+    //С этим вектором мы можем вычислить угол с помощью функции atan2
+    val angleInRadians = atan2(dy.toDouble(), dx.toDouble())
+//Теперь у нас есть угол в диапазоне от −180 до 180 градусов.
+    return Math.toDegrees(angleInRadians).toFloat()
+}
 
 @Preview
 @Composable
