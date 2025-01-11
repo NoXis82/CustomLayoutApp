@@ -43,6 +43,7 @@ private val digits = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
 @Composable
 fun OldPhone(
     modifier: Modifier = Modifier,
+    onDigitSelected: (String) -> Unit, // коллбек для обработки набранной цифры
 ) {
 
     var rotationAngle by remember { mutableFloatStateOf(0f) }
@@ -116,6 +117,12 @@ fun OldPhone(
                                 .first()
                                 .consume()
                         } while (event.changes.any { it.pressed })
+
+                        // Проверяем, довел ли пользователь диск до конца
+                        val isDigitFullySelected = rotationAngle >= maxRotation * 0.9f // небольшой запас для удобства
+                        if (isDigitFullySelected) {
+                            onDigitSelected(digits[digitHit]) // вызываем коллбек с набранной цифрой
+                        }
 
                         activeDigitIndex = -1
                         //сбрасываем угол вращения диска в 0
@@ -340,5 +347,7 @@ private fun OldPhonePreview() {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-    )
+    ) {
+
+    }
 }
