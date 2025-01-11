@@ -5,6 +5,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -14,8 +16,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
@@ -26,6 +30,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
+import ru.noxis.customlayoutapp.ui.theme.baseColor
+import ru.noxis.customlayoutapp.ui.theme.centerAndFrameColor
+import ru.noxis.customlayoutapp.ui.theme.coverColor
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -52,8 +59,18 @@ fun OldPhone(
         targetValue = rotationAngle, label = "rotationAngle"
     )
 
+    val texts = remember {
+        digits.map { digit ->
+            textMeasurer.measure(
+                text = digit,
+                style = typography,
+            )
+        }
+    }
+
     Canvas(
         modifier = modifier
+            .padding(4.dp)
             .aspectRatio(1f)
             .pointerInput(Unit) {
                 awaitEachGesture {
@@ -78,11 +95,6 @@ fun OldPhone(
                             val event = awaitPointerEvent()
                             val newAngle =
                                 calculateAngle(event.changes.first().position, size.center)
-//                        /**
-//                         * Когда палец двигается, мы вычисляем разницу между новым углом и предыдущим
-//                         * deltaAngle - изменение угла
-//                         */
-//                        val deltaAngle = newAngle - currentAngle
 
                             //необходимо нормализовать deltaAngle
                             val deltaAngle = (newAngle - currentAngle).let { delta ->
@@ -92,19 +104,12 @@ fun OldPhone(
                                     else -> delta
                                 }
                             }
-//                        rotationAngle = (rotationAngle + deltaAngle)
 
                             val targetRotation = rotationAngle + deltaAngle
 
                             if (rotationAngle <= maxRotation) {
                                 rotationAngle = targetRotation.coerceIn(0f, maxRotation)
                             }
-
-                            //движения диска только в одну сторону, а именно от 0 до 270 градусов
-//                            val canRotate = rotationAngle in 0f..270f
-//                            if (canRotate) {
-//                                rotationAngle = targetRotation.coerceIn(0f, 270f)
-//                            }
 
                             currentAngle = newAngle
                             event.changes
@@ -123,76 +128,49 @@ fun OldPhone(
     ) {
         //шаг расположения цифр
         val angleStep = -270f / digits.size
-        val radius = size.width / 2f - 20.dp.toPx()
+        val radius = size.width / 2f - 40.dp.toPx()
         //цент круга
         val center = Offset(size.width / 2, size.height / 2)
-        val digitSize = 64.dp.toPx()
+        val digitSize = 56.dp.toPx()
+
+        // Основа с цифрами
+        drawCircle(
+            color = baseColor,
+        )
 
         //заполняем список digitBoundsList реальными данными уже в момент отрисоки
-        digits.forEachIndexed { index, _ ->
+        digits.forEachIndexed { index, digit ->
             val angleInDegrees = index * angleStep - 45
             val angleInRadians = Math.toRadians(angleInDegrees.toDouble())
-
             val x = center.x + radius * cos(angleInRadians).toFloat()
             val y = center.y + radius * sin(angleInRadians).toFloat()
-
             digitBoundsList[index].update(x, y, digitSize)
+            val bounds = digitBoundsList[index]
+            val xDigit = (bounds.left + bounds.right) / 2
+            val yDigit = (bounds.top + bounds.bottom) / 2
+            //рисуем циферблат
+            val textLayoutResult: TextLayoutResult = texts[index]
+            drawText(
+                textLayoutResult = textLayoutResult,
+                topLeft = Offset(
+                    xDigit - textLayoutResult.size.width / 2f,
+                    yDigit - textLayoutResult.size.height / 2f,
+                ),
+            )
         }
 
         rotate(animatedRotationAngle) {
 
             // радиус внутреннего диска, который находится в центре
-            val centerCircleRadius = size.width / 3.21f
+            val centerCircleRadius = size.width / 4f
 
+            // Центральный круг и рамка
             drawCircle(
-                color = Color.White,
-            )
-
-            digits.forEachIndexed { index, digit ->
-                //необходимо добавить смещение на -45 градусов.
-//                val angleInDegrees = index * angleStep - 45
-                //перевести угол из градусов в радианы
-//                val angleInRadians = Math.toRadians(angleInDegrees.toDouble())
-                //координаты размещения цифр на циферблате
-//                val x = center.x + radius * cos(angleInRadians).toFloat()
-//                val y = center.y + radius * sin(angleInRadians).toFloat()
-
-                val bounds = digitBoundsList[index]
-                val x = (bounds.left + bounds.right) / 2
-                val y = (bounds.top + bounds.bottom) / 2
-
-                //рисуем циферблат
-                val textLayoutResult: TextLayoutResult = textMeasurer.measure(
-                    text = digit,
-                    style = typography,
-                )
-
-                drawText(
-                    textLayoutResult = textLayoutResult,
-                    topLeft = Offset(
-                        x - textLayoutResult.size.width / 2f,
-                        y - textLayoutResult.size.height / 2f,
-                    ),
-                )
-
-                //Индекс нажатой цифры был найден, осталось нарисовать индикатор
-                val isActive = index == activeDigitIndex
-
-                if (isActive) {
-                    drawCircle(
-                        color = Color.Blue.copy(alpha = 0.3f),
-                        radius = digitSize / 1.8f,
-                        center = Offset(x, y)
-                    )
-                }
-            }
-
-            // рисуем внутренний диск серого цвета
-            drawCircle(
-                color = Color.LightGray,
+                color = centerAndFrameColor,
                 radius = centerCircleRadius,
                 center = center
             )
+
             // количество точек, которые будут расположены по кругу
             val dotsCount = 12
 
@@ -225,12 +203,53 @@ fun OldPhone(
                 )
             }
 
+            val diskPath = Path().apply {
+                // Создаем основной круг
+                addOval(
+                    Rect(
+                        center = center,
+                        radius = size.width / 2f
+                    )
+                )
 
+                // Добавляем отверстия для цифр
+                digits.forEachIndexed { index, _ ->
+                    val angleInDegrees = index * angleStep - 45
+                    val angleInRadians = Math.toRadians(angleInDegrees.toDouble())
+
+                    val x = center.x + radius * cos(angleInRadians).toFloat()
+                    val y = center.y + radius * sin(angleInRadians).toFloat()
+
+                    addOval(
+                        Rect(
+                            center = Offset(x, y),
+                            radius = digitSize / 2f
+                        )
+                    )
+                }
+
+                // Добавляем отверстие для центральной части
+                addOval(
+                    Rect(
+                        center = center,
+                        radius = centerCircleRadius
+                    )
+                )
+
+                // Используем EvenOdd для создания отверстий
+                fillType = PathFillType.EvenOdd
+            }
+
+            // Вращающаяся крышка с отверстиями
+            drawPath(
+                path = diskPath,
+                color = coverColor,
+            )
         }
 
         // рисуем внешнюю рамку телефонного диска
         drawCircle(
-            color = Color.LightGray,
+            color = centerAndFrameColor,
             radius = size.width / 2f,
             center = center,
             style = Stroke(
@@ -279,11 +298,9 @@ fun OldPhone(
                 lineTo(innerLeftX, innerLeftY)
                 close()
             },
-            color = Color.LightGray
+            color = centerAndFrameColor
         )
-
     }
-
 }
 
 //
@@ -319,5 +336,9 @@ private fun calculateAngle(position: Offset, center: IntOffset): Float {
 @Preview
 @Composable
 private fun OldPhonePreview() {
-    OldPhone(modifier = Modifier)
+    OldPhone(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    )
 }
